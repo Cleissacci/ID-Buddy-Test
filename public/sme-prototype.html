@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SME Brain Dump - ID Buddy Prototype</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons via CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#163328',
+                        accent: '#2d4a3e',
+                        surface: '#faf9f7',
+                        'surface-container-low': '#f4f3f1',
+                        border: '#c1c8c3',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #faf9f7; color: #1a1c1b; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Top Navigation -->
+    <header class="px-8 py-4 bg-white border-b border-border flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
+                <span class="text-white font-bold tracking-tighter">ID</span>
+            </div>
+            <span class="font-semibold text-lg text-slate-800">ID Buddy Prototype</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-sm font-medium text-slate-500">Standalone HTML Version</span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Input -->
+        <div class="w-1/2 flex flex-col border-r border-border bg-surface-container-low p-8 overflow-y-auto">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">SME Brain Dump Workspace</h1>
+            <p class="text-slate-600 mb-8">Translate dense subject matter expert transcripts into clear instructional content.</p>
+            
+            <div class="flex-1 flex flex-col">
+                <label for="smeInput" class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-file-lines text-slate-500"></i>
+                    Raw SME Input
+                </label>
+                <textarea 
+                    id="smeInput" 
+                    class="flex-1 w-full bg-white border border-border rounded-xl p-6 text-slate-700 focus:outline-none focus:ring-2 focus:ring-accent resize-none shadow-sm leading-relaxed text-base"
+                    placeholder="Paste transcript, meeting notes, or raw whitepapers here..."
+                ></textarea>
+                
+                <button 
+                    id="processBtn"
+                    class="mt-6 px-6 py-4 bg-primary text-white rounded-lg font-medium text-lg hover:bg-opacity-90 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                    <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span id="btnText">Process Input</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Output -->
+        <div class="w-1/2 flex flex-col bg-white overflow-hidden">
+            <!-- Tabs -->
+            <div class="flex border-b border-border bg-surface px-6 pt-2 shrink-0">
+                <button id="tabJargon" class="tab-btn px-6 py-4 text-sm font-semibold border-b-2 border-accent text-accent transition-colors" data-target="jargonPane">
+                    Jargon Scrubber
+                </button>
+                <button id="tabAnalogy" class="tab-btn px-6 py-4 text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors" data-target="analogyPane">
+                    Analogy Generator
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8 relative">
+                
+                <!-- Initial State -->
+                <div id="initialState" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-white z-10">
+                    <i class="fa-solid fa-arrow-left text-4xl mb-4 opacity-50"></i>
+                    <p class="text-lg">Enter text and click Process Input to see results</p>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="absolute inset-0 flex flex-col items-center justify-center text-accent hidden bg-white z-20">
+                    <i class="fa-solid fa-circle-notch fa-spin text-5xl mb-6"></i>
+                    <p class="font-medium text-lg animate-pulse">Analyzing pedagogical structures...</p>
+                </div>
+
+                <!-- Output Panes Container -->
+                <div id="outputContainer" class="hidden h-full">
+                    
+                    <!-- Jargon Pane -->
+                    <div id="jargonPane" class="pane-content h-full">
+                        <div class="p-4 bg-blue-50 border border-blue-100 rounded-lg text-blue-900 text-sm mb-6 flex gap-3">
+                            <i class="fa-solid fa-circle-info mt-0.5 text-blue-600"></i>
+                            <p id="jargonSummary">We found complex terms in your input. Hover over highlighted terms to see alternatives.</p>
+                        </div>
+                        <div id="jargonContent" class="bg-surface p-6 rounded-xl border border-border text-slate-700 leading-relaxed whitespace-pre-wrap text-base">
+                            <!-- Dynamic content injected here via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Analogy Pane -->
+                    <div id="analogyPane" class="pane-content hidden h-full flex flex-col">
+                        <div class="p-4 bg-purple-50 border border-purple-100 rounded-lg text-purple-900 text-sm mb-6 flex gap-3 shrink-0">
+                            <i class="fa-solid fa-lightbulb mt-0.5 text-purple-600"></i>
+                            <p>Here are everyday analogies generated to help explain the concepts found in your text.</p>
+                        </div>
+                        <div id="analogyContent" class="space-y-4 flex-1 overflow-y-auto pb-4">
+                            <!-- Dynamic content injected here via JS -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Application Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // -- DOM Elements Selection --
+            const smeInput = document.getElementById('smeInput');
+            const processBtn = document.getElementById('processBtn');
+            const btnIcon = document.getElementById('btnIcon');
+            const btnText = document.getElementById('btnText');
+            
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const panes = document.querySelectorAll('.pane-content');
+            
+            const initialState = document.getElementById('initialState');
+            const loadingState = document.getElementById('loadingState');
+            const outputContainer = document.getElementById('outputContainer');
+            
+            const jargonSummary = document.getElementById('jargonSummary');
+            const jargonContent = document.getElementById('jargonContent');
+            const analogyContent = document.getElementById('analogyContent');
+
+            // -- 1. Tab Switching Logic --
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Reset all tabs to inactive state
+                    tabBtns.forEach(t => {
+                        t.classList.remove('border-accent', 'text-accent');
+                        t.classList.add('border-transparent', 'text-slate-500');
+                    });
+                    
+                    // Set clicked tab to active state
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+                    btn.classList.add('border-accent', 'text-accent');
+                    
+                    // Hide all content panes
+                    panes.forEach(p => p.classList.add('hidden'));
+                    
+                    // Show target pane based on data attribute
+                    const targetId = btn.getAttribute('data-target');
+                    document.getElementById(targetId).classList.remove('hidden');
+                });
+            });
+
+            // -- Process Input Handler --
+            processBtn.addEventListener('click', async () => {
+                const text = smeInput.value.trim();
+                if (!text) {
+                    alert('Please enter some text in the Raw SME Input field to process.');
+                    return;
+                }
+
+                // 2. Asynchronous Processing State (Loading)
+                processBtn.disabled = true;
+                btnIcon.className = 'fa-solid fa-circle-notch fa-spin';
+                btnText.textContent = 'Processing...';
+                
+                initialState.classList.add('hidden');
+                outputContainer.classList.add('hidden');
+                loadingState.classList.remove('hidden');
+
+                try {
+                    // 3. Dynamic API Placeholder
+                    // ==========================================
+                    //  PLACEHOLDER FOR REAL AI API CALL
+                    // ==========================================
+                    // const response = await fetch('https://your-api-endpoint.com/process', {
+                    //     method: 'POST',
+                    //     headers: { 'Content-Type': 'application/json' },
+                    //     body: JSON.stringify({ raw_text: text })
+                    // });
+                    // const data = await response.json();
+                    
+                    // Simulate network delay of 1.5 seconds as requested
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    // 4. Data Injection & Dynamic Rendering
+                    
+                    // --- Dynamic Jargon Extraction (Mock logic) ---
+                    // Extract words > 7 characters to pretend they are "jargon" for this prototype
+                    const words = text.split(/[\s,.-]+/);
+                    const complexWords = [...new Set(words.filter(w => w.length > 7))].slice(0, 5);
+                    
+                    // Update Summary
+                    jargonSummary.innerHTML = `We found <strong>${complexWords.length || 2}</strong> complex terms in your input. Hover over highlighted terms to see alternatives.`;
+                    
+                    // Highlight terms in the text
+                    let highlightedHtml = text;
+                    if (complexWords.length > 0) {
+                        complexWords.forEach(word => {
+                            // Create a regular expression for whole word match
+                            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                            // Replace with highlighted span
+                            highlightedHtml = highlightedHtml.replace(
+                                regex, 
+                                `<span class="bg-blue-100 text-blue-900 font-semibold px-1.5 py-0.5 rounded cursor-help border border-blue-200 transition-colors hover:bg-blue-200" title="Suggested Alternative: simplified version of ${word}">$&</span>`
+                            );
+                        });
+                    } else {
+                        // Fallback generic highlight if no long words found
+                        highlightedHtml = `<span class="bg-blue-100 text-blue-900 font-semibold px-1.5 py-0.5 rounded cursor-help border border-blue-200" title="Suggested Alternative: simplified concept">The text</span> ${highlightedHtml.substring(8)}`;
+                    }
+                    jargonContent.innerHTML = highlightedHtml;
+                    
+                    // --- Dynamic Analogy Generation (Mock logic) ---
+                    let analogiesHtml = '';
+                    const conceptsForAnalogy = complexWords.length > 0 ? complexWords.slice(0, 3) : ['Your Core Concept', 'The Primary Topic'];
+                    
+                    conceptsForAnalogy.forEach((concept, index) => {
+                        const types = ['The Foundation Analogy', 'The Ecosystem Analogy', 'The Journey Analogy'];
+                        const analogyType = types[index % types.length];
+                        
+                        analogiesHtml += `
+                            <div class="p-5 rounded-xl border border-border bg-white shadow-sm hover:shadow-md transition-shadow">
+                                <h3 class="text-base font-semibold text-slate-900 mb-2">${analogyType}: "${concept}"</h3>
+                                <p class="text-sm text-slate-600 leading-relaxed">
+                                    Think of <strong>${concept}</strong> like constructing a building. Before you can focus on the interior design (the finer details), 
+                                    you must ensure the foundation and structural beams are solidly in place. In the same way, this concept provides the necessary 
+                                    groundwork for all subsequent learning.
+                                </p>
+                                <div class="mt-4 flex gap-2">
+                                    <button class="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors">
+                                        <i class="fa-regular fa-copy mr-1"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    analogyContent.innerHTML = analogiesHtml;
+
+                } catch (error) {
+                    console.error('API Error:', error);
+                    alert('An error occurred while processing the input. Please try again.');
+                } finally {
+                    // Restore button state
+                    processBtn.disabled = false;
+                    btnIcon.className = 'fa-solid fa-wand-magic-sparkles';
+                    btnText.textContent = 'Process Input';
+                    
+                    // Hide loading, show results container
+                    loadingState.classList.add('hidden');
+                    outputContainer.classList.remove('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

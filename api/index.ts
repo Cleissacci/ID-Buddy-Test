@@ -141,9 +141,9 @@ app.post("/api/sme-process", async (req, res) => {
                 properties: {
                   title: { type: "STRING" },
                   text: { type: "STRING" }
-                }
-              },
-              required: ["title", "text"]
+                },
+                required: ["title", "text"]
+              }
             }
           },
           required: ["jargonTerms", "analogies"]

@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { BookOpen, FileText, CheckCircle2, TrendingUp, Plus, LayoutTemplate, Clock, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+interface Project {
+  id: string;
+  title: string;
+  lastEdited: string;
+  status: string;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -14,11 +21,29 @@ export default function Dashboard() {
     { label: "A11y Checks Passed", value: "100%", trend: "Consistent", icon: CheckCircle2 },
   ];
 
-  const [recentProjects, setRecentProjects] = useState([
-    { title: "Compliance Training 2024", lastEdited: "2 hours ago", status: "In Progress" },
-    { title: "Sales Enablement V2", lastEdited: "Yesterday", status: "Review" },
-    { title: "Onboarding Bootcamp", lastEdited: "3 days ago", status: "Planning" },
-  ]);
+  const [recentProjects, setRecentProjects] = useState<Project[]>(() => {
+    const saved = localStorage.getItem('id_buddy_projects');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [
+      { id: "proj-1", title: "Compliance Training 2024", lastEdited: "2 hours ago", status: "In Progress" },
+      { id: "proj-2", title: "Sales Enablement V2", lastEdited: "Yesterday", status: "Review" },
+      { id: "proj-3", title: "Onboarding Bootcamp", lastEdited: "3 days ago", status: "Planning" },
+    ];
+  });
+
+  const saveProjects = (projects: Project[]) => {
+    localStorage.setItem('id_buddy_projects', JSON.stringify(projects));
+  };
+
+  const handleSelectProject = (project: Project) => {
+    localStorage.setItem('id_buddy_active_project_id', project.id);
+    localStorage.setItem('id_buddy_active_project_title', project.title);
+    navigate('/curriculum-mapper');
+  };
 
   const quickTools = [
     { title: "SME Translator", desc: "Simplify complex jargon", to: "/sme-translator" },
@@ -29,20 +54,40 @@ export default function Dashboard() {
 
   const handleCreateProject = () => {
     if (!newProjectName.trim()) return;
-    setRecentProjects([
-      { title: newProjectName, lastEdited: "Just now", status: "Planning" },
-      ...recentProjects
-    ]);
+    const newProj = {
+      id: `proj-${Date.now()}`,
+      title: newProjectName,
+      lastEdited: "Just now",
+      status: "Planning"
+    };
+    const updated = [newProj, ...recentProjects];
+    setRecentProjects(updated);
+    saveProjects(updated);
+    
+    localStorage.setItem('id_buddy_active_project_id', newProj.id);
+    localStorage.setItem('id_buddy_active_project_title', newProj.title);
+
     setNewProjectName("");
     setIsNewProjectModalOpen(false);
+    navigate('/curriculum-mapper');
   };
 
   const handleCreateFromTemplate = (templateName: string) => {
-    setRecentProjects([
-      { title: `New ${templateName}`, lastEdited: "Just now", status: "Planning" },
-      ...recentProjects
-    ]);
+    const newProj = {
+      id: `proj-${Date.now()}`,
+      title: `New ${templateName}`,
+      lastEdited: "Just now",
+      status: "Planning"
+    };
+    const updated = [newProj, ...recentProjects];
+    setRecentProjects(updated);
+    saveProjects(updated);
+    
+    localStorage.setItem('id_buddy_active_project_id', newProj.id);
+    localStorage.setItem('id_buddy_active_project_title', newProj.title);
+
     setIsTemplatesModalOpen(false);
+    navigate('/curriculum-mapper');
   };
 
   return (
@@ -105,10 +150,10 @@ export default function Dashboard() {
             <button className="text-sm font-medium text-primary hover:underline">View all</button>
           </div>
           <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden divide-y divide-border">
-            {recentProjects.map((project, i) => (
+            {recentProjects.map((project) => (
               <div 
-                key={i} 
-                onClick={() => navigate('/curriculum-mapper')}
+                key={project.id} 
+                onClick={() => handleSelectProject(project)}
                 className="p-4 flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer group"
               >
                 <div className="flex items-center gap-4">

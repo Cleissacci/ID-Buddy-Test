@@ -1,14 +1,76 @@
-import { useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle, FileWarning, Eye, Type, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, AlertTriangle, CheckCircle, FileWarning, Eye, Type, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { cn } from '../components/Layout';
 
 export default function A11yQa() {
-  const [checklist, setChecklist] = useState({
-    contrast: true,
-    captions: false,
-    keyboard: true
+  const activeProjectId = localStorage.getItem('id_buddy_active_project_id') || 'default';
+  const projectTitle = localStorage.getItem('id_buddy_active_project_title') || "Unnamed Project";
+
+  const [isAuditing, setIsAuditing] = useState(false);
+
+  const [moduleContent, setModuleContent] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_a11y_content`) || "Introduction to Quantum Mechanics: In this module, we will cover the basic principles of wave-particle duality, Schrödinger's equation, and quantum entanglement. We'll show visual diagrams of the wave function collapse without alt text. Let's watch an embedded video explaining Heisenberg's Uncertainty Principle (no captions).";
   });
-  const [issuesFixed, setIssuesFixed] = useState(false);
+
+  const [checklist, setChecklist] = useState(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_a11y_checklist`);
+    return saved ? JSON.parse(saved) : { contrast: true, captions: false, keyboard: true };
+  });
+
+  const [issuesFixed, setIssuesFixed] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_a11y_fixed`) === 'true';
+  });
+
+  const [contrastScore, setContrastScore] = useState(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_a11y_contrast`);
+    return saved !== null ? Number(saved) : 95;
+  });
+
+  const [altTextScore, setAltTextScore] = useState(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_a11y_alt`);
+    return saved !== null ? Number(saved) : 75;
+  });
+
+  const [readabilityGrade, setReadabilityGrade] = useState(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_a11y_readability`);
+    return saved !== null ? Number(saved) : 8;
+  });
+
+  const [criticalIssues, setCriticalIssues] = useState<Array<{ type: string, title: string, description: string }>>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_a11y_issues`);
+    return saved ? JSON.parse(saved) : [
+      { type: 'complexity', title: '3 complex sentences found', description: 'Sentences exceed 25 words. Consider breaking them down for better cognitive load.' },
+      { type: 'alt', title: '2 missing image alt-tags', description: 'Images lack descriptive tags. Screen readers will skip these.' }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_content`, moduleContent);
+  }, [moduleContent, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_checklist`, JSON.stringify(checklist));
+  }, [checklist, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_fixed`, String(issuesFixed));
+  }, [issuesFixed, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_contrast`, String(contrastScore));
+  }, [contrastScore, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_alt`, String(altTextScore));
+  }, [altTextScore, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_readability`, String(readabilityGrade));
+  }, [readabilityGrade, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_a11y_issues`, JSON.stringify(criticalIssues));
+  }, [criticalIssues, activeProjectId]);
 
   const handleFixAll = () => {
     setIssuesFixed(true);
@@ -17,20 +79,75 @@ export default function A11yQa() {
       captions: true,
       keyboard: true
     });
+    setContrastScore(100);
+    setAltTextScore(100);
+    setCriticalIssues([]);
   };
 
-  const criticalIssuesCount = issuesFixed ? 0 : 5;
-  const contrastScore = 95;
-  const altTextScore = issuesFixed ? 100 : 75;
+  const handleAuditContent = async () => {
+    if (!moduleContent.trim()) return;
+    setIsAuditing(true);
+    setIssuesFixed(false);
+    
+    try {
+      const response = await fetch('/api/a11y-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: moduleContent }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to perform accessibility check');
+      }
+      
+      const data = await response.json();
+      setContrastScore(data.contrastScore);
+      setAltTextScore(data.altTextScore);
+      setReadabilityGrade(data.readabilityGrade);
+      setChecklist(data.checklist);
+      setCriticalIssues(data.criticalIssues || []);
+    } catch (error) {
+      alert('Failed to audit content. Please try again.');
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const criticalIssuesCount = issuesFixed ? 0 : criticalIssues.length;
 
   return (
     <div className="flex flex-col h-full bg-surface overflow-y-auto pb-12">
       <div className="px-8 py-8 md:py-12 max-w-5xl mx-auto w-full">
         
         {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Accessibility Pre-Flight Check</h1>
-          <p className="text-muted-foreground mt-2 text-lg">Reviewing module "Introduction to Quantum Mechanics" for WCAG compliance.</p>
+        <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              A11y Pre-Flight <span className="text-primary font-medium text-lg ml-2">({projectTitle})</span>
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">Review your course content or scripts for WCAG compliance.</p>
+          </div>
+        </div>
+
+        {/* Input Textarea & Scan Button */}
+        <div className="bg-white border border-border rounded-xl p-6 shadow-sm mb-8 flex flex-col gap-4">
+          <h3 className="font-semibold text-slate-900">
+            Course Content / Slide Text Scanner
+          </h3>
+          <textarea
+            className="w-full bg-surface border border-border rounded-lg p-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none leading-relaxed h-32"
+            value={moduleContent}
+            onChange={(e) => setModuleContent(e.target.value)}
+            placeholder="Paste your module text, slide content, or audio script here to scan for accessibility issues..."
+          />
+          <button
+            onClick={handleAuditContent}
+            disabled={isAuditing || !moduleContent.trim()}
+            className="self-end px-6 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isAuditing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {isAuditing ? "Scanning..." : "Scan Content"}
+          </button>
         </div>
 
         {/* Meters & Scores Grid */}
@@ -49,10 +166,14 @@ export default function A11yQa() {
               </svg>
               <div className="flex flex-col items-center z-10">
                 <span className="text-3xl font-bold text-primary">{contrastScore}%</span>
-                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Pass</span>
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">
+                  {contrastScore >= 90 ? "Pass" : "Warning"}
+                </span>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-6">AA Compliance met for all primary text elements.</p>
+            <p className="text-sm text-muted-foreground mt-6">
+              {contrastScore >= 90 ? "AA Compliance met for all primary text elements." : "Some text elements have low contrast ratios."}
+            </p>
           </div>
 
           {/* Alt-Text Coverage */}
@@ -64,17 +185,17 @@ export default function A11yQa() {
               {/* Fake SVG donut chart */}
               <svg className="absolute inset-0 w-full h-full -rotate-90">
                 <circle cx="64" cy="64" r="56" fill="transparent" stroke="#f4f3f1" strokeWidth="12" />
-                <circle cx="64" cy="64" r="56" fill="transparent" stroke={issuesFixed ? "#163328" : "#eab308"} strokeWidth="12" strokeDasharray="351.8" strokeDashoffset={351.8 - (351.8 * altTextScore / 100)} strokeLinecap="round" className="transition-all duration-1000" />
+                <circle cx="64" cy="64" r="56" fill="transparent" stroke={altTextScore >= 90 ? "#163328" : "#eab308"} strokeWidth="12" strokeDasharray="351.8" strokeDashoffset={351.8 - (351.8 * altTextScore / 100)} strokeLinecap="round" className="transition-all duration-1000" />
               </svg>
               <div className="flex flex-col items-center z-10">
-                <span className={cn("text-3xl font-bold transition-colors duration-500", issuesFixed ? "text-primary" : "text-yellow-600")}>{altTextScore}%</span>
+                <span className={cn("text-3xl font-bold transition-colors duration-500", altTextScore >= 90 ? "text-primary" : "text-yellow-600")}>{altTextScore}%</span>
                 <span className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">
-                  {issuesFixed ? "Pass" : "Warning"}
+                  {altTextScore >= 90 ? "Pass" : "Warning"}
                 </span>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-6">
-              {issuesFixed ? "All decorative images properly tagged." : "Missing alt-text on 2 decorative images."}
+              {altTextScore >= 90 ? "All decorative/informative images properly tagged." : "Missing alt-text on some image references."}
             </p>
           </div>
 
@@ -89,11 +210,13 @@ export default function A11yQa() {
             <div className="flex items-center justify-between mt-6">
               <div className="bg-primary/10 text-primary px-5 py-3 rounded-lg flex items-baseline gap-1">
                 <span className="text-sm font-semibold uppercase tracking-wider">Grade</span>
-                <span className="text-4xl font-bold">8</span>
+                <span className="text-4xl font-bold">{readabilityGrade}</span>
               </div>
               <CheckCircle className="w-8 h-8 text-primary" />
             </div>
-            <p className="text-sm text-muted-foreground mt-6 border-t border-border pt-4">Optimal for general adult audiences.</p>
+            <p className="text-sm text-muted-foreground mt-6 border-t border-border pt-4">
+              {readabilityGrade <= 8 ? "Optimal for general adult audiences." : "Slightly complex. Consider simplification."}
+            </p>
           </div>
 
         </div>
@@ -121,26 +244,35 @@ export default function A11yQa() {
                     <h4 className="text-lg font-semibold text-slate-900">All Issues Resolved</h4>
                     <p className="text-sm text-muted-foreground mt-2">Your module now passes all baseline accessibility checks.</p>
                   </div>
+                ) : criticalIssues.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                    <CheckCircle className="w-12 h-12 text-primary mb-4" />
+                    <h4 className="text-lg font-semibold text-slate-900">All Clear!</h4>
+                    <p className="text-sm text-muted-foreground mt-2">No accessibility issues detected in this content.</p>
+                  </div>
                 ) : (
-                  <>
-                    {/* Issue 1 */}
-                    <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                      <FileWarning className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-900">3 complex sentences found</h4>
-                        <p className="text-sm text-slate-600 mt-1">Sentences exceed 25 words. Consider breaking them down for better cognitive load.</p>
-                      </div>
-                    </div>
-
-                    {/* Issue 2 */}
-                    <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <ImageIcon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-slate-900">2 missing image alt-tags</h4>
-                        <p className="text-sm text-slate-600 mt-1">Images in slide 4 and 7 lack descriptive tags. Screen readers will skip these.</p>
-                      </div>
-                    </div>
-                  </>
+                  <div className="space-y-4">
+                    {criticalIssues.map((issue, idx) => {
+                      let bgColor = "bg-orange-50 border-orange-200";
+                      let textColor = "text-orange-600";
+                      let Icon = FileWarning;
+                      if (issue.type === 'alt' || issue.type === 'contrast') {
+                        bgColor = "bg-red-50 border-red-200";
+                        textColor = "text-red-600";
+                        Icon = ImageIcon;
+                      }
+                      
+                      return (
+                        <div key={idx} className={cn("flex items-start gap-3 p-4 border rounded-lg", bgColor)}>
+                          <Icon className={cn("w-5 h-5 shrink-0 mt-0.5", textColor)} />
+                          <div>
+                            <h4 className="text-sm font-semibold text-slate-900">{issue.title}</h4>
+                            <p className="text-sm text-slate-600 mt-1">{issue.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
 
               </div>

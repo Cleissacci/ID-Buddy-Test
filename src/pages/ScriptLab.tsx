@@ -1,14 +1,54 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, FileAudio, Settings2, Copy, Sparkles, MoveRight, List, MousePointerClick, AlignLeft, Loader2 } from 'lucide-react';
 import { cn } from '../components/Layout';
 
 export default function ScriptLab() {
-  const [highlightedText, setHighlightedText] = useState<number | null>(null);
-  const [rawScript, setRawScript] = useState("");
-  const [cleanScriptBlocks, setCleanScriptBlocks] = useState<string[]>([]);
+  const activeProjectId = localStorage.getItem('id_buddy_active_project_id') || 'default';
+  const projectTitle = localStorage.getItem('id_buddy_active_project_title') || "Unnamed Project";
+
   const [isCleaning, setIsCleaning] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [highlightedText, setHighlightedText] = useState<number | null>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_sl_highlighted`);
+    return saved !== null ? Number(saved) : null;
+  });
+
+  const [rawScript, setRawScript] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_sl_raw_script`) || "";
+  });
+
+  const [cleanScriptBlocks, setCleanScriptBlocks] = useState<string[]>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_sl_clean_blocks`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [suggestions, setSuggestions] = useState<Array<{ type: 'timeline' | 'drag-drop' | 'quiz', title: string, description: string }>>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_sl_suggestions`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_sl_raw_script`, rawScript);
+  }, [rawScript, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_sl_clean_blocks`, JSON.stringify(cleanScriptBlocks));
+  }, [cleanScriptBlocks, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_sl_suggestions`, JSON.stringify(suggestions));
+  }, [suggestions, activeProjectId]);
+
+  useEffect(() => {
+    if (highlightedText !== null) {
+      localStorage.setItem(`id_buddy_${activeProjectId}_sl_highlighted`, String(highlightedText));
+    } else {
+      localStorage.removeItem(`id_buddy_${activeProjectId}_sl_highlighted`);
+    }
+  }, [highlightedText, activeProjectId]);
 
   const sampleRawText = "[00:00:00] Speaker 1: Uh, yeah, so today we're gonna talk about, you know, the main principles of adult learning theory. Basically, it's like, adults learn differently than kids do.\n\n[00:00:15] Speaker 1: They need relevance. And, um, they want to apply things immediately to their jobs. So, like, Malcolm Knowles talked about this stuff.";
 
@@ -47,44 +87,70 @@ export default function ScriptLab() {
     }
   };
 
-  const handleCleanScript = () => {
+  const handleCleanScript = async () => {
     if (!rawScript.trim()) return;
     setIsCleaning(true);
     
-    // Simulate AI cleaning delay
-    setTimeout(() => {
-      // Basic logic to strip timestamps like [00:00:00] and Speaker tags like "Speaker 1:"
-      // Also removes filler words like "Uh,", "um," "like," 
-      let cleaned = rawScript
-        .replace(/\[\d{2}:\d{2}:\d{2}\]\s*/g, '') // Remove timestamps
-        .replace(/Speaker \d+:\s*/g, '') // Remove speaker tags
-        .replace(/\b(Uh|um|like|you know)\b,?\s*/gi, '') // Remove fillers
-        .trim();
-        
-      // In a real app this would be more sophisticated (e.g., via LLM to rewrite cleanly)
-      // For the prototype we'll split into paragraphs and slightly refine
-      const blocks = cleaned.split('\n\n').filter(Boolean);
+    try {
+      const response = await fetch('/api/clean-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: rawScript }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clean script');
+      }
+
+      const data = await response.json();
+      setCleanScriptBlocks(data.cleanedBlocks || []);
+      setHighlightedText(null);
+      setSuggestions([]);
+    } catch (error) {
+      alert('Failed to clean script. Please try again.');
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  const handleSelectBlock = async (idx: number, blockText: string) => {
+    if (highlightedText === idx) {
+      setHighlightedText(null);
+      setSuggestions([]);
+      return;
+    }
+    
+    setHighlightedText(idx);
+    setIsSuggesting(true);
+    setSuggestions([]);
+    
+    try {
+      const response = await fetch('/api/suggest-interactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockText }),
+      });
       
-      // Override with the requested clean text for better demo visuals if the sample was used
-      if (rawScript === sampleRawText) {
-         setCleanScriptBlocks([
-           "Today, we will discuss the foundational principles of Adult Learning Theory. Adults learn differently than children; they require immediate relevance and practical application to their professional roles.",
-           "Renowned educator Malcolm Knowles pioneered this concept, identifying key assumptions about adult learners, such as their need for self-direction and immediate applicability."
-         ]);
-      } else {
-         setCleanScriptBlocks(blocks);
+      if (!response.ok) {
+        throw new Error('Failed to fetch suggestions');
       }
       
-      setIsCleaning(false);
-      setHighlightedText(null);
-    }, 1500);
+      const data = await response.json();
+      setSuggestions(data.suggestions || []);
+    } catch (error) {
+      console.error('Interaction suggestions error:', error);
+    } finally {
+      setIsSuggesting(false);
+    }
   };
 
   return (
     <div className="flex flex-col h-full bg-surface">
       <div className="px-8 py-6 border-b border-border bg-white flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Media & Scripting Laboratory</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Script Lab <span className="text-primary font-medium text-base ml-2">({projectTitle})</span>
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">Clean raw transcripts and identify interactive opportunities.</p>
         </div>
       </div>
@@ -174,33 +240,39 @@ export default function ScriptLab() {
               </div>
               
               <div className="p-5 overflow-y-auto text-sm text-slate-800 leading-relaxed bg-white h-full relative">
-                 {cleanScriptBlocks.length === 0 ? (
-                   <div className="h-full flex items-center justify-center text-slate-400 italic">
-                     Click the sparkle button to generate a clean script.
-                   </div>
-                 ) : (
-                   <div className="space-y-4 pb-12">
-                     {cleanScriptBlocks.map((block, idx) => (
-                        <p 
-                          key={idx}
-                          className={cn(
-                            "p-2 -ml-2 rounded-r border-l-4 cursor-pointer transition-colors",
-                            highlightedText === idx 
-                              ? "bg-accent/10 border-accent" 
-                              : "border-transparent hover:bg-surface-container-low"
-                          )}
-                          onClick={() => setHighlightedText(highlightedText === idx ? null : idx)}
-                        >
-                          {block}
-                        </p>
-                     ))}
-                   </div>
-                 )}
+                  {cleanScriptBlocks.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-slate-400 italic">
+                      Click the sparkle button to generate a clean script.
+                    </div>
+                  ) : (
+                    <div className="space-y-4 pb-12">
+                      {cleanScriptBlocks.map((block, idx) => (
+                         <p 
+                           key={idx}
+                           className={cn(
+                             "p-2 -ml-2 rounded-r border-l-4 cursor-pointer transition-colors",
+                             highlightedText === idx 
+                               ? "bg-accent/10 border-accent" 
+                               : "border-transparent hover:bg-surface-container-low"
+                           )}
+                           onClick={() => handleSelectBlock(idx, block)}
+                         >
+                           {block}
+                         </p>
+                      ))}
+                    </div>
+                  )}
               </div>
 
               {/* Copy FAB */}
               {cleanScriptBlocks.length > 0 && (
-                <button className="absolute bottom-4 right-4 bg-slate-900 text-white rounded-full p-3 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group px-4">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(cleanScriptBlocks.join('\n\n'));
+                    alert('Copied full script to clipboard!');
+                  }}
+                  className="absolute bottom-4 right-4 bg-slate-900 text-white rounded-full p-3 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group px-4 animate-in fade-in duration-300"
+                >
                   <Copy className="w-4 h-4" />
                   <span className="text-sm font-medium">Copy Script</span>
                 </button>
@@ -220,46 +292,51 @@ export default function ScriptLab() {
               </div>
               
               <div className="flex-1 p-5 overflow-y-auto bg-surface space-y-3">
-                {highlightedText !== null ? (
-                  <>
-                    <div className="p-4 bg-white border border-border hover:border-accent rounded-lg cursor-pointer transition-colors shadow-sm group">
-                      <div className="flex gap-3">
-                        <div className="bg-blue-50 text-blue-600 p-2 rounded-md h-fit group-hover:bg-blue-100 transition-colors">
-                          <MoveRight className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-slate-900">Interactive Timeline</h4>
-                          <p className="text-xs text-muted-foreground mt-1">Visualize the evolution of adult learning theories over time based on Knowles' work.</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-white border border-border hover:border-accent rounded-lg cursor-pointer transition-colors shadow-sm group">
-                      <div className="flex gap-3">
-                        <div className="bg-emerald-50 text-emerald-600 p-2 rounded-md h-fit group-hover:bg-emerald-100 transition-colors">
-                          <MousePointerClick className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-slate-900">Drag-and-Drop Matching</h4>
-                          <p className="text-xs text-muted-foreground mt-1">Match Knowles' 5 assumptions to practical workplace scenarios.</p>
-                        </div>
-                      </div>
-                    </div>
+                {isSuggesting && (
+                  <div className="h-full flex flex-col items-center justify-center text-primary py-12">
+                     <Loader2 className="w-8 h-8 mb-2 animate-spin opacity-80" />
+                     <p className="text-sm font-medium animate-pulse">Generating interactive treatments...</p>
+                  </div>
+                )}
 
-                    <div className="p-4 bg-white border border-border hover:border-accent rounded-lg cursor-pointer transition-colors shadow-sm group opacity-70">
-                      <div className="flex gap-3">
-                        <div className="bg-purple-50 text-purple-600 p-2 rounded-md h-fit group-hover:bg-purple-100 transition-colors">
-                          <List className="w-5 h-5" />
+                {!isSuggesting && highlightedText !== null && suggestions.length > 0 && (
+                  <>
+                    {suggestions.map((suggestion, i) => {
+                      let iconColor = "bg-blue-50 text-blue-600";
+                      let Icon = MoveRight;
+                      if (suggestion.type === 'drag-drop') {
+                        iconColor = "bg-emerald-50 text-emerald-600";
+                        Icon = MousePointerClick;
+                      } else if (suggestion.type === 'quiz') {
+                        iconColor = "bg-purple-50 text-purple-600";
+                        Icon = List;
+                      }
+                      
+                      return (
+                        <div key={i} className="p-4 bg-white border border-border hover:border-accent rounded-lg cursor-pointer transition-colors shadow-sm group">
+                          <div className="flex gap-3">
+                            <div className={cn("p-2 rounded-md h-fit transition-colors", iconColor)}>
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-slate-900">{suggestion.title}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">{suggestion.description}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-slate-900">Knowledge Check</h4>
-                          <p className="text-xs text-muted-foreground mt-1">Standard multiple choice assessing the need for self-direction.</p>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center px-4 text-slate-400">
+                )}
+
+                {!isSuggesting && highlightedText !== null && suggestions.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center px-4 text-slate-400 py-12">
+                    <p className="text-sm">No specific interaction ideas found for this block.</p>
+                  </div>
+                )}
+
+                {!isSuggesting && highlightedText === null && (
+                  <div className="h-full flex flex-col items-center justify-center text-center px-4 text-slate-400 py-12">
                     <MousePointerClick className="w-8 h-8 mb-3 opacity-50" />
                     <p className="text-sm">Click on a paragraph in the Clean Script Output to generate interaction ideas.</p>
                   </div>

@@ -1,18 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Replace, FileText, Info, Loader2 } from 'lucide-react';
 import { cn } from '../components/Layout';
 
 export default function SmeWorkspace() {
+  const activeProjectId = localStorage.getItem('id_buddy_active_project_id') || 'default';
+  const projectTitle = localStorage.getItem('id_buddy_active_project_title') || "Unnamed Project";
+
   const [activeTab, setActiveTab] = useState<'jargon' | 'analogy'>('jargon');
-  const [inputText, setInputText] = useState("The pedagogy relies on a heuristic evaluation of the user's cognitive load during the onboarding flow. We need to scaffold the learning experience to mitigate churn.");
   const [hoveredTerm, setHoveredTerm] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasProcessed, setHasProcessed] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [inputText, setInputText] = useState(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_sme_input`);
+    return saved !== null ? saved : "The pedagogy relies on a heuristic evaluation of the user's cognitive load during the onboarding flow. We need to scaffold the learning experience to mitigate churn.";
+  });
+
   const [apiResults, setApiResults] = useState<{
     jargonTerms: Array<{ term: string, alternatives: string[] }>,
     analogies: Array<{ title: string, text: string }>
-  }>({ jargonTerms: [], analogies: [] });
+  }>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_sme_results`);
+    return saved ? JSON.parse(saved) : { jargonTerms: [], analogies: [] };
+  });
+
+  const [hasProcessed, setHasProcessed] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_sme_processed`) === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_sme_input`, inputText);
+  }, [inputText, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_sme_results`, JSON.stringify(apiResults));
+  }, [apiResults, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_sme_processed`, String(hasProcessed));
+  }, [hasProcessed, activeProjectId]);
 
   const handleProcessInput = async () => {
     if (!inputText.trim()) return;
@@ -20,28 +46,17 @@ export default function SmeWorkspace() {
     setErrorMessage("");
     
     try {
-      // Placeholder for real AI API call
-      // const response = await fetch('YOUR_API_ENDPOINT', { ... })
-      // const data = await response.json();
+      const response = await fetch('/api/sme-process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: inputText }),
+      });
 
-      // Simulate API call processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!response.ok) {
+        throw new Error('Failed to process SME input');
+      }
       
-      const data = {
-        jargonTerms: [
-          { term: "pedagogy", alternatives: ["teaching method", "instructional approach", "educational strategy"] },
-          { term: "heuristic evaluation", alternatives: ["expert review", "usability check", "rule-of-thumb assessment"] },
-          { term: "cognitive load", alternatives: ["mental effort", "brain power", "thinking required"] },
-          { term: "scaffold", alternatives: ["support", "structure", "guide step-by-step"] },
-          { term: "mitigate churn", alternatives: ["reduce drop-offs", "keep learners engaged", "prevent quitting"] }
-        ],
-        analogies: [
-          { title: "The Foundation Analogy", text: "Think of 'scaffolding' like training wheels on a bicycle. You provide a lot of support at first, and gradually remove it as the learner gains confidence and balance." },
-          { title: "The Backpack Analogy", text: "'Cognitive load' is like packing a backpack for a hike. If you put too many heavy rocks (complex concepts) in at once, the hiker (learner) will get exhausted and stop. We need to unpack the heavy rocks and hand them out one by one." },
-          { title: "The Tour Guide Analogy", text: "A 'heuristic evaluation' is like having an experienced tour guide walk through your museum before it opens to the public, pointing out where visitors might get lost or confused based on their past experience." }
-        ]
-      };
-      
+      const data = await response.json();
       setApiResults(data);
       setHasProcessed(true);
       setActiveTab('jargon');
@@ -50,6 +65,18 @@ export default function SmeWorkspace() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleQuickReplace = (term: string, replacement: string) => {
+    const regex = new RegExp(term, 'gi');
+    const updatedText = inputText.replace(regex, replacement);
+    setInputText(updatedText);
+    
+    // Remove the replaced term from jargon highlight list
+    setApiResults(prev => ({
+      ...prev,
+      jargonTerms: prev.jargonTerms.filter(t => t.term.toLowerCase() !== term.toLowerCase())
+    }));
   };
 
   // Helper to render text with highlighted jargon
@@ -103,7 +130,9 @@ export default function SmeWorkspace() {
     <div className="flex flex-col h-full">
       <div className="px-8 py-6 border-b border-border bg-white flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">SME Brain Dump Workspace</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            SME Workspace <span className="text-primary font-medium text-base ml-2">({projectTitle})</span>
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">Translate dense subject matter expert transcripts into clear instructional content.</p>
         </div>
         <button 
@@ -194,9 +223,12 @@ export default function SmeWorkspace() {
                   {apiResults.jargonTerms.map((t, i) => (
                     <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-border bg-white hover:border-accent transition-colors group cursor-pointer">
                       <span className="font-medium text-slate-800">"{t.term}"</span>
-                      <button className="flex items-center gap-1.5 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => handleQuickReplace(t.term, t.alternatives[0])}
+                        className="flex items-center gap-1.5 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
                         <Replace className="w-3.5 h-3.5" />
-                        Quick Replace
+                        Replace with "{t.alternatives[0]}"
                       </button>
                     </div>
                   ))}
@@ -217,10 +249,19 @@ export default function SmeWorkspace() {
                       <h3 className="text-base font-semibold text-slate-900 mb-2">{analogy.title}</h3>
                       <p className="text-sm text-slate-600 leading-relaxed">{analogy.text}</p>
                       <div className="mt-4 flex gap-2">
-                        <button className="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors">
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${analogy.title}\n${analogy.text}`);
+                            alert('Copied analogy to clipboard!');
+                          }}
+                          className="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors"
+                        >
                           Copy Analogy
                         </button>
-                        <button className="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors">
+                        <button 
+                          onClick={() => alert(`Saved "${analogy.title}" to project resources!`)}
+                          className="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors"
+                        >
                           Save to Project
                         </button>
                       </div>

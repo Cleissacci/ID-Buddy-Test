@@ -1,12 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertCircle, Plus, BookOpen, Target, LayoutGrid, CheckCircle2, Wand2, Loader2 } from 'lucide-react';
 import { cn } from '../components/Layout';
 
+interface Objective {
+  id: string;
+  text: string;
+  level: string;
+  assessment: string;
+  activity: string;
+}
+
 export default function CurriculumMapper() {
-  const [distractorInput, setDistractorInput] = useState("");
-  const [correctAnswerInput, setCorrectAnswerInput] = useState("");
-  const [showDistractors, setShowDistractors] = useState(false);
+  const activeProjectId = localStorage.getItem('id_buddy_active_project_id') || 'default';
+  const projectTitle = localStorage.getItem('id_buddy_active_project_title') || "Unnamed Project";
+
+  const [distractorInput, setDistractorInput] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_cm_dist_input`) || "";
+  });
+  const [correctAnswerInput, setCorrectAnswerInput] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_cm_dist_answer`) || "";
+  });
+  const [showDistractors, setShowDistractors] = useState(() => {
+    return localStorage.getItem(`id_buddy_${activeProjectId}_cm_dist_show`) === 'true';
+  });
   const [isGeneratingDistractors, setIsGeneratingDistractors] = useState(false);
+  const [distractors, setDistractors] = useState<string[]>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_cm_distractors`);
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const initialObjectives = [
     {
@@ -32,18 +53,76 @@ export default function CurriculumMapper() {
     }
   ];
 
-  const [objectives, setObjectives] = useState(initialObjectives);
+  const [objectives, setObjectives] = useState<Objective[]>(() => {
+    const saved = localStorage.getItem(`id_buddy_${activeProjectId}_cm_objectives`);
+    return saved ? JSON.parse(saved) : initialObjectives;
+  });
 
-  const handleGenerateDistractors = () => {
+  // Sync with localStorage
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_cm_dist_input`, distractorInput);
+  }, [distractorInput, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_cm_dist_answer`, correctAnswerInput);
+  }, [correctAnswerInput, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_cm_dist_show`, String(showDistractors));
+  }, [showDistractors, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_cm_distractors`, JSON.stringify(distractors));
+  }, [distractors, activeProjectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`id_buddy_${activeProjectId}_cm_objectives`, JSON.stringify(objectives));
+  }, [objectives, activeProjectId]);
+
+  const handleUpdateObjective = (id: string, field: keyof Objective, val: string) => {
+    setObjectives(prev => prev.map(o => o.id === id ? { ...o, [field]: val } : o));
+  };
+
+  const handleToggleLevel = (id: string, currentLevel: string) => {
+    const levels = ["Knowledge", "Comprehension", "Application", "Analysis", "Synthesis", "Evaluation"];
+    const currentIndex = levels.indexOf(currentLevel);
+    const nextLevel = levels[(currentIndex + 1) % levels.length];
+    handleUpdateObjective(id, 'level', nextLevel);
+  };
+
+  const handlePlusRowAction = (id: string) => {
+    const action = prompt("Type 'assessment' to add an assessment, or 'activity' to add an enabling activity:");
+    if (action === 'assessment') {
+      handleUpdateObjective(id, 'assessment', 'Formative Assessment');
+    } else if (action === 'activity') {
+      handleUpdateObjective(id, 'activity', 'Enabling Learning Activity');
+    }
+  };
+
+  const handleGenerateDistractors = async () => {
     if (!distractorInput.trim() || !correctAnswerInput.trim()) return;
     setIsGeneratingDistractors(true);
     setShowDistractors(false);
     
-    // Simulate API delay
-    setTimeout(() => {
-      setIsGeneratingDistractors(false);
+    try {
+      const response = await fetch('/api/generate-distractors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: distractorInput, correctAnswer: correctAnswerInput }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate distractors');
+      }
+      
+      const data = await response.json();
+      setDistractors(data.distractors || []);
       setShowDistractors(true);
-    }, 1200);
+    } catch (error) {
+      alert('Failed to generate distractors. Please try again.');
+    } finally {
+      setIsGeneratingDistractors(false);
+    }
   };
 
   const handleAddObjective = () => {
@@ -61,7 +140,9 @@ export default function CurriculumMapper() {
     <div className="flex flex-col h-full bg-surface">
       <div className="px-8 py-6 border-b border-border bg-white flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Alignment & Mapping Suite</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Curriculum Mapper <span className="text-primary font-medium text-base ml-2">({projectTitle})</span>
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">Map learning objectives to assessments and activities.</p>
         </div>
         <button 
@@ -105,11 +186,22 @@ export default function CurriculumMapper() {
                   <div className="col-span-5 flex flex-col gap-2">
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 text-xs font-bold text-slate-400 w-12 shrink-0">{obj.id}</span>
-                      <p className="text-sm font-medium text-slate-900 outline-none hover:bg-surface-container-low p-1 -m-1 rounded transition-colors" contentEditable suppressContentEditableWarning>
+                      <p 
+                        className="text-sm font-medium text-slate-900 outline-none hover:bg-surface-container-low p-1 -m-1 rounded transition-colors" 
+                        contentEditable 
+                        suppressContentEditableWarning
+                        onBlur={(e) => {
+                          const newText = e.currentTarget.textContent || "";
+                          handleUpdateObjective(obj.id, 'text', newText);
+                        }}
+                      >
                         {obj.text}
                       </p>
                     </div>
-                    <span className="ml-14 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 self-start cursor-pointer hover:bg-slate-200">
+                    <span 
+                      onClick={() => handleToggleLevel(obj.id, obj.level)}
+                      className="ml-14 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 self-start cursor-pointer hover:bg-slate-200"
+                    >
                       Bloom's: {obj.level}
                     </span>
                   </div>
@@ -118,17 +210,19 @@ export default function CurriculumMapper() {
                     {obj.assessment ? (
                       <div 
                         className="text-sm text-slate-700 bg-surface px-3 py-2 rounded-md border border-border w-full outline-none hover:border-accent transition-colors cursor-text"
-                        contentEditable suppressContentEditableWarning
+                        contentEditable 
+                        suppressContentEditableWarning
+                        onBlur={(e) => {
+                          const newText = e.currentTarget.textContent || "";
+                          handleUpdateObjective(obj.id, 'assessment', newText);
+                        }}
                       >
                         {obj.assessment}
                       </div>
                     ) : (
                       <div 
                         className="text-sm text-red-700 bg-red-50 px-3 py-2 rounded-md border border-red-200 border-dashed w-full flex items-center gap-2 cursor-pointer hover:bg-red-100 transition-colors"
-                        onClick={() => {
-                          const updated = objectives.map(o => o.id === obj.id ? { ...o, assessment: 'New Assessment' } : o);
-                          setObjectives(updated);
-                        }}
+                        onClick={() => handleUpdateObjective(obj.id, 'assessment', 'New Assessment')}
                       >
                         <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                         <span className="font-medium">Missing Assessment</span>
@@ -140,24 +234,29 @@ export default function CurriculumMapper() {
                     {obj.activity ? (
                       <div 
                         className="text-sm text-slate-700 bg-surface px-3 py-2 rounded-md border border-border w-full mr-2 outline-none hover:border-accent transition-colors cursor-text"
-                        contentEditable suppressContentEditableWarning
+                        contentEditable 
+                        suppressContentEditableWarning
+                        onBlur={(e) => {
+                          const newText = e.currentTarget.textContent || "";
+                          handleUpdateObjective(obj.id, 'activity', newText);
+                        }}
                       >
                         {obj.activity}
                       </div>
                     ) : (
                       <div 
                         className="text-sm text-orange-700 bg-orange-50 px-3 py-2 rounded-md border border-orange-200 border-dashed w-full mr-2 flex items-center gap-2 cursor-pointer hover:bg-orange-100 transition-colors"
-                        onClick={() => {
-                          const updated = objectives.map(o => o.id === obj.id ? { ...o, activity: 'New Activity' } : o);
-                          setObjectives(updated);
-                        }}
+                        onClick={() => handleUpdateObjective(obj.id, 'activity', 'New Activity')}
                       >
                         <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
                         <span className="font-medium">Missing Activity</span>
                       </div>
                     )}
                     
-                    <button className="p-1.5 text-slate-400 hover:text-primary rounded-md hover:bg-surface transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+                    <button 
+                      onClick={() => handlePlusRowAction(obj.id)}
+                      className="p-1.5 text-slate-400 hover:text-primary rounded-md hover:bg-surface transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                    >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
@@ -209,11 +308,11 @@ export default function CurriculumMapper() {
                 {isGeneratingDistractors ? "Generating..." : "Generate Options"}
               </button>
 
-              {showDistractors && (
+               {showDistractors && (
                 <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Suggested Distractors</span>
                   
-                  {["Analysis (Plausible - previous phase)", "Development (Plausible - next phase)", "Prototyping (Related concept, wrong phase)"].map((opt, i) => (
+                  {distractors.map((opt, i) => (
                     <div key={i} className="flex items-start gap-2 p-2.5 bg-red-50/50 border border-red-100 rounded-md text-sm text-slate-700 group cursor-pointer hover:bg-red-50 transition-colors">
                       <div className="w-5 h-5 rounded-full bg-white border border-red-200 flex items-center justify-center text-[10px] font-bold text-red-500 shrink-0 mt-0.5">
                         {String.fromCharCode(66 + i)}
@@ -221,7 +320,15 @@ export default function CurriculumMapper() {
                       <span>{opt}</span>
                     </div>
                   ))}
-                  <button className="text-xs text-accent font-medium hover:underline self-end mt-1">Copy All</button>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(distractors.map((opt, idx) => `${String.fromCharCode(66 + idx)}) ${opt}`).join('\n'));
+                      alert('Copied all distractors to clipboard!');
+                    }}
+                    className="text-xs text-accent font-medium hover:underline self-end mt-1"
+                  >
+                    Copy All
+                  </button>
                 </div>
               )}
             </div>

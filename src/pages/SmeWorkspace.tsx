@@ -90,7 +90,7 @@ export default function SmeWorkspace() {
 
     const parts = result.split('|');
     return (
-      <div className="leading-relaxed whitespace-pre-wrap font-medium text-slate-700">
+      <div className="leading-relaxed whitespace-pre-wrap font-sans text-xs text-ink">
         {parts.map((part, i) => {
           const matchedTerm = apiResults.jargonTerms.find(t => t.term.toLowerCase() === part.toLowerCase());
           if (matchedTerm) {
@@ -98,23 +98,23 @@ export default function SmeWorkspace() {
               <span 
                 key={i} 
                 className={cn(
-                  "relative inline-block bg-accent/15 text-accent font-semibold px-1.5 py-0.5 rounded cursor-help border border-accent/20 transition-colors",
-                  hoveredTerm === matchedTerm.term && "bg-accent/30 border-accent/40"
+                  "relative inline-block border-b border-dashed border-ink bg-gray-50 text-ink font-mono px-1 rounded-sm cursor-help transition-colors",
+                  hoveredTerm === matchedTerm.term && "bg-ink text-background"
                 )}
                 onMouseEnter={() => setHoveredTerm(matchedTerm.term)}
                 onMouseLeave={() => setHoveredTerm(null)}
               >
                 {part}
                 {hoveredTerm === matchedTerm.term && (
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-xs rounded shadow-lg z-10 flex flex-col gap-1">
-                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Alternatives:</span>
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-ink text-background text-[10px] font-mono border border-gray-200 rounded shadow-bryl-modal z-10 flex flex-col gap-1">
+                    <span className="font-semibold text-gray-400 uppercase tracking-widest">Alternatives:</span>
                     {matchedTerm.alternatives.map((alt, i) => (
-                      <span key={i} className="flex items-center gap-1.5">
-                        <span className="w-1 h-1 rounded-full bg-accent"></span>
+                      <span key={i} className="flex items-center gap-1.5 lowercase">
+                        <span>-</span>
                         {alt}
                       </span>
                     ))}
-                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink"></span>
                   </span>
                 )}
               </span>
@@ -127,33 +127,36 @@ export default function SmeWorkspace() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-8 py-6 border-b border-border bg-white flex items-center justify-between shrink-0">
+    <div className="flex flex-col h-full bg-background transition-colors duration-500 text-ink">
+      <div className="px-8 py-6 border-b border-gray-200 bg-background flex items-center justify-between shrink-0 transition-colors duration-500">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            SME Workspace <span className="text-primary font-medium text-base ml-2">({projectTitle})</span>
+          <span className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">
+            01 — Workspace
+          </span>
+          <h1 className="text-2xl font-display font-bold text-ink lowercase tracking-tight mt-1">
+            sme dump <span className="text-gray-400 font-mono text-xs ml-2">({projectTitle.toLowerCase()})</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Translate dense subject matter expert transcripts into clear instructional content.</p>
+          <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wider font-mono">Translate subject matter expert inputs into clear course topics.</p>
         </div>
         <button 
           onClick={handleProcessInput}
           disabled={isLoading || !inputText.trim()}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3 py-2 bg-ink text-background rounded text-[10px] font-mono tracking-widest uppercase hover:bg-ink/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          {isLoading ? "Processing..." : "Process Input"}
+          {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          {isLoading ? "processing..." : "process input"}
         </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left Column: Input */}
-        <div className="w-1/2 flex flex-col border-r border-border bg-surface-container-low p-6">
+        <div className="w-1/2 flex flex-col border-r border-gray-200 bg-background p-6 transition-colors duration-500">
           <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Raw SME Input</h2>
+            <FileText className="w-3.5 h-3.5 text-gray-400" />
+            <h2 className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">raw input</h2>
           </div>
           <textarea 
-            className="flex-1 w-full bg-white border border-border rounded-xl p-5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none shadow-sm leading-relaxed"
+            className="flex-1 w-full bg-gray-50 border border-gray-200 rounded p-4 text-xs font-sans focus:outline-none focus:border-ink resize-none leading-relaxed transition-colors duration-500"
             placeholder="Paste transcript, meeting notes, or raw whitepapers here..."
             value={inputText}
             onChange={(e) => {
@@ -164,71 +167,70 @@ export default function SmeWorkspace() {
         </div>
 
         {/* Right Column: Output Pane */}
-        <div className="w-1/2 flex flex-col bg-white">
-          <div className="flex border-b border-border px-6 pt-2 shrink-0 bg-surface">
+        <div className="w-1/2 flex flex-col bg-background transition-colors duration-500">
+          <div className="flex border-b border-gray-200 px-6 pt-2 shrink-0 bg-gray-50 transition-colors duration-500">
             <button 
               className={cn(
-                "px-6 py-3 text-sm font-semibold border-b-2 transition-colors",
-                activeTab === 'jargon' ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-800"
+                "px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest border-b-2 transition-colors",
+                activeTab === 'jargon' ? "border-ink text-ink font-bold" : "border-transparent text-gray-400 hover:text-ink"
               )}
               onClick={() => setActiveTab('jargon')}
             >
-              Jargon Scrubber
+              jargon scrubber
             </button>
             <button 
               className={cn(
-                "px-6 py-3 text-sm font-semibold border-b-2 transition-colors",
-                activeTab === 'analogy' ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-800"
+                "px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest border-b-2 transition-colors",
+                activeTab === 'analogy' ? "border-ink text-ink font-bold" : "border-transparent text-gray-400 hover:text-ink"
               )}
               onClick={() => setActiveTab('analogy')}
             >
-              Analogy Generator
+              analogy generator
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8 relative">
             {!hasProcessed && !isLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-white/80 backdrop-blur-[2px] z-10">
-                 <Sparkles className="w-10 h-10 mb-4 opacity-50" />
-                 <p>Paste your content and click "Process Input" to begin.</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-background/80 backdrop-blur-[2px] z-10 transition-colors duration-500">
+                 <Sparkles className="w-8 h-8 mb-3 opacity-40" />
+                 <p className="text-[10px] font-mono uppercase tracking-widest">paste input and click process to begin.</p>
               </div>
             )}
             
             {isLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-primary bg-white/80 backdrop-blur-[2px] z-10">
-                 <Loader2 className="w-10 h-10 mb-4 animate-spin opacity-80" />
-                 <p className="font-medium animate-pulse">Analyzing pedagogical structures...</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-ink bg-background/80 backdrop-blur-[2px] z-10 transition-colors duration-500">
+                 <Loader2 className="w-8 h-8 mb-3 animate-spin opacity-60" />
+                 <p className="text-[10px] font-mono uppercase tracking-widest animate-pulse">analyzing pedagogical structures...</p>
               </div>
             )}
 
             {errorMessage && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 bg-white/80 backdrop-blur-[2px] z-10">
-                 <p className="font-medium">{errorMessage}</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-ink bg-background/80 backdrop-blur-[2px] z-10 transition-colors duration-500">
+                 <p className="text-[10px] font-mono uppercase tracking-widest border border-gray-200 px-4 py-2 bg-gray-50 rounded text-red-500">{errorMessage}</p>
               </div>
             )}
 
             {activeTab === 'jargon' && (
               <div className="space-y-6 max-w-2xl">
-                <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-lg text-blue-900 text-sm">
-                  <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                  <p>We found <strong>{apiResults.jargonTerms.length}</strong> complex terms in your input. Hover over the highlighted terms below to see plain-language alternatives.</p>
+                <div className="p-4 border border-gray-200 rounded bg-gray-50 text-ink text-[11px] font-mono uppercase tracking-wider leading-relaxed">
+                  pedagogy feedback — we found <strong className="text-ink font-bold">{apiResults.jargonTerms.length}</strong> complex terms. hover highlights to inspect alternatives.
                 </div>
                 
-                <div className="bg-surface p-6 rounded-xl border border-border">
+                <div className="bg-background p-6 rounded border border-gray-200 leading-relaxed font-sans text-xs shadow-bryl-resting">
                   {renderHighlightedText()}
                 </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Detected Terms</h3>
+                <div className="space-y-2">
+                  <h3 className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">detected terms</h3>
                   {apiResults.jargonTerms.map((t, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-border bg-white hover:border-accent transition-colors group cursor-pointer">
-                      <span className="font-medium text-slate-800">"{t.term}"</span>
+                    <div key={i} className="flex items-center justify-between p-3 rounded border border-gray-200 bg-background hover:border-ink transition-colors group shadow-bryl-resting">
+                      <span className="text-xs font-mono text-ink font-semibold">"{t.term.toLowerCase()}"</span>
                       <button 
                         onClick={() => handleQuickReplace(t.term, t.alternatives[0])}
-                        className="flex items-center gap-1.5 text-xs font-medium text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="flex items-center gap-1 px-2 py-1 border border-gray-200 rounded text-[9px] font-mono uppercase tracking-widest hover:bg-gray-50 bg-background"
                       >
-                        <Replace className="w-3.5 h-3.5" />
-                        Replace with "{t.alternatives[0]}"
+                        <Replace className="w-3 h-3 text-gray-400" />
+                        replace: "{t.alternatives[0].toLowerCase()}"
                       </button>
                     </div>
                   ))}
@@ -238,31 +240,31 @@ export default function SmeWorkspace() {
 
             {activeTab === 'analogy' && (
               <div className="space-y-6 max-w-2xl">
-                <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-100 rounded-lg text-purple-900 text-sm">
-                  <Sparkles className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                  <p>Here are {apiResults.analogies.length} everyday analogies generated to help explain the complex concepts in your text.</p>
+                <div className="p-4 border border-gray-200 rounded bg-gray-50 text-ink text-[11px] font-mono uppercase tracking-wider leading-relaxed">
+                  creative pedagogy — here are {apiResults.analogies.length} analogies to simplify complex learning.
                 </div>
 
                 <div className="space-y-4">
                   {apiResults.analogies.map((analogy, i) => (
-                    <div key={i} className="p-5 rounded-xl border border-border bg-white shadow-sm hover:shadow-md transition-shadow">
-                      <h3 className="text-base font-semibold text-slate-900 mb-2">{analogy.title}</h3>
-                      <p className="text-sm text-slate-600 leading-relaxed">{analogy.text}</p>
+                    <div key={i} className="p-5 rounded border border-gray-200 bg-background shadow-bryl-resting hover:shadow-bryl-hover transition-all duration-350">
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block mb-1">analogy 0{i + 1}</span>
+                      <h3 className="text-sm font-sans font-semibold text-ink mb-2">{analogy.title}</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed font-sans">{analogy.text}</p>
                       <div className="mt-4 flex gap-2">
                         <button 
                           onClick={() => {
                             navigator.clipboard.writeText(`${analogy.title}\n${analogy.text}`);
                             alert('Copied analogy to clipboard!');
                           }}
-                          className="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors"
+                          className="px-3 py-1.5 border border-gray-200 rounded text-[10px] font-mono tracking-widest uppercase hover:bg-gray-50 bg-background transition-colors"
                         >
-                          Copy Analogy
+                          copy
                         </button>
                         <button 
                           onClick={() => alert(`Saved "${analogy.title}" to project resources!`)}
-                          className="px-3 py-1.5 bg-surface text-slate-700 text-xs font-medium rounded-md border border-border hover:bg-surface-container-highest transition-colors"
+                          className="px-3 py-1.5 border border-gray-200 rounded text-[10px] font-mono tracking-widest uppercase hover:bg-gray-50 bg-background transition-colors"
                         >
-                          Save to Project
+                          save
                         </button>
                       </div>
                     </div>

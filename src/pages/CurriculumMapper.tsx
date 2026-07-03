@@ -137,20 +137,23 @@ export default function CurriculumMapper() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface">
-      <div className="px-8 py-6 border-b border-border bg-white flex items-center justify-between shrink-0">
+    <div className="flex flex-col h-full bg-background transition-colors duration-500 text-ink">
+      <div className="px-8 py-6 border-b border-gray-200 bg-background flex items-center justify-between shrink-0 transition-colors duration-500">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Curriculum Mapper <span className="text-primary font-medium text-base ml-2">({projectTitle})</span>
+          <span className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">
+            01 — Curriculum
+          </span>
+          <h1 className="text-2xl font-display font-bold text-ink lowercase tracking-tight mt-1">
+            curriculum mapper <span className="text-gray-400 font-mono text-xs ml-2">({projectTitle.toLowerCase()})</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Map learning objectives to assessments and activities.</p>
+          <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wider font-mono">Map learning objectives to assessments and enabling activities.</p>
         </div>
         <button 
           onClick={handleAddObjective}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-3 py-2 bg-ink text-background rounded text-[10px] font-mono tracking-widest uppercase hover:bg-ink/90 transition-colors"
         >
-          <Plus className="w-4 h-4" />
-          Add Objective
+          <Plus className="w-3.5 h-3.5" />
+          add objective
         </button>
       </div>
 
@@ -159,35 +162,34 @@ export default function CurriculumMapper() {
         {/* Main Matrix */}
         <div className="flex-1 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-              <LayoutGrid className="w-5 h-5 text-accent" />
-              Curriculum Matrix
+            <h2 className="text-xs font-mono font-semibold text-gray-400 uppercase tracking-widest">
+              02 — curriculum matrix
             </h2>
           </div>
           
-          <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-background border border-gray-200 rounded-lg overflow-hidden flex flex-col shadow-bryl-resting transition-colors duration-500">
             {/* Header Row */}
-            <div className="grid grid-cols-12 gap-4 p-4 border-b border-border bg-surface-container-low text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              <div className="col-span-5 flex items-center gap-2">
-                <Target className="w-4 h-4" /> Learning Objective
+            <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-200 bg-gray-50 text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest transition-colors duration-500">
+              <div className="col-span-5 flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5" /> learning objective
               </div>
-              <div className="col-span-3 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" /> Assessment
+              <div className="col-span-3 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" /> assessment
               </div>
-              <div className="col-span-4 flex items-center gap-2">
-                <BookOpen className="w-4 h-4" /> Enabling Activity
+              <div className="col-span-4 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" /> enabling activity
               </div>
             </div>
 
             {/* Rows */}
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-gray-200 transition-colors duration-500">
               {objectives.map((obj) => (
-                <div key={obj.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-surface-container-highest/30 transition-colors group">
+                <div key={obj.id} className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50/30 transition-colors group">
                   <div className="col-span-5 flex flex-col gap-2">
                     <div className="flex items-start gap-2">
-                      <span className="mt-0.5 text-xs font-bold text-slate-400 w-12 shrink-0">{obj.id}</span>
+                      <span className="mt-0.5 text-xs font-mono font-bold text-gray-400 w-12 shrink-0">{obj.id}</span>
                       <p 
-                        className="text-sm font-medium text-slate-900 outline-none hover:bg-surface-container-low p-1 -m-1 rounded transition-colors" 
+                        className="text-xs font-sans text-ink outline-none hover:bg-gray-50 p-1 -m-1 rounded transition-colors cursor-text" 
                         contentEditable 
                         suppressContentEditableWarning
                         onBlur={(e) => {
@@ -200,16 +202,16 @@ export default function CurriculumMapper() {
                     </div>
                     <span 
                       onClick={() => handleToggleLevel(obj.id, obj.level)}
-                      className="ml-14 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 self-start cursor-pointer hover:bg-slate-200"
+                      className="ml-14 inline-flex items-center px-2 py-0.5 rounded-full border border-gray-300 text-[9px] font-mono uppercase tracking-widest text-gray-500 bg-gray-50 hover:bg-gray-100 cursor-pointer self-start transition-colors"
                     >
-                      Bloom's: {obj.level}
+                      bloom's: {obj.level.toLowerCase()}
                     </span>
                   </div>
                   
                   <div className="col-span-3 flex items-start">
                     {obj.assessment ? (
                       <div 
-                        className="text-sm text-slate-700 bg-surface px-3 py-2 rounded-md border border-border w-full outline-none hover:border-accent transition-colors cursor-text"
+                        className="text-xs text-ink bg-background px-3 py-2 rounded border border-gray-200 w-full outline-none hover:border-ink focus:border-ink transition-colors cursor-text font-sans"
                         contentEditable 
                         suppressContentEditableWarning
                         onBlur={(e) => {
@@ -221,11 +223,11 @@ export default function CurriculumMapper() {
                       </div>
                     ) : (
                       <div 
-                        className="text-sm text-red-700 bg-red-50 px-3 py-2 rounded-md border border-red-200 border-dashed w-full flex items-center gap-2 cursor-pointer hover:bg-red-100 transition-colors"
+                        className="text-xs text-gray-400 bg-gray-50 px-3 py-2 rounded border border-dashed border-gray-300 w-full flex items-center gap-2 cursor-pointer hover:bg-gray-100 hover:text-ink transition-colors font-mono uppercase tracking-wider text-[10px]"
                         onClick={() => handleUpdateObjective(obj.id, 'assessment', 'New Assessment')}
                       >
-                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                        <span className="font-medium">Missing Assessment</span>
+                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span>missing assessment</span>
                       </div>
                     )}
                   </div>
@@ -233,7 +235,7 @@ export default function CurriculumMapper() {
                   <div className="col-span-4 flex items-start justify-between">
                     {obj.activity ? (
                       <div 
-                        className="text-sm text-slate-700 bg-surface px-3 py-2 rounded-md border border-border w-full mr-2 outline-none hover:border-accent transition-colors cursor-text"
+                        className="text-xs text-ink bg-background px-3 py-2 rounded border border-gray-200 w-full mr-2 outline-none hover:border-ink focus:border-ink transition-colors cursor-text font-sans"
                         contentEditable 
                         suppressContentEditableWarning
                         onBlur={(e) => {
@@ -245,19 +247,19 @@ export default function CurriculumMapper() {
                       </div>
                     ) : (
                       <div 
-                        className="text-sm text-orange-700 bg-orange-50 px-3 py-2 rounded-md border border-orange-200 border-dashed w-full mr-2 flex items-center gap-2 cursor-pointer hover:bg-orange-100 transition-colors"
+                        className="text-xs text-gray-400 bg-gray-50 px-3 py-2 rounded border border-dashed border-gray-300 w-full mr-2 flex items-center gap-2 cursor-pointer hover:bg-gray-100 hover:text-ink transition-colors font-mono uppercase tracking-wider text-[10px]"
                         onClick={() => handleUpdateObjective(obj.id, 'activity', 'New Activity')}
                       >
-                        <AlertCircle className="w-4 h-4 text-orange-500 shrink-0" />
-                        <span className="font-medium">Missing Activity</span>
+                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span>missing activity</span>
                       </div>
                     )}
                     
                     <button 
                       onClick={() => handlePlusRowAction(obj.id)}
-                      className="p-1.5 text-slate-400 hover:text-primary rounded-md hover:bg-surface transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                      className="p-1 border border-gray-200 rounded hover:bg-gray-50 text-ink bg-background transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -268,20 +270,20 @@ export default function CurriculumMapper() {
 
         {/* Distractor Generator (Right Sidebar) */}
         <div className="w-full xl:w-80 flex flex-col gap-4 shrink-0">
-          <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden flex flex-col h-fit">
-            <div className="p-4 border-b border-border bg-gradient-to-r from-accent/10 to-transparent">
-              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-accent" />
-                Distractor Generator
+          <div className="bg-background border border-gray-200 rounded-lg shadow-bryl-resting overflow-hidden flex flex-col h-fit transition-colors duration-500">
+            <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col gap-1 transition-colors duration-500">
+              <h3 className="font-mono uppercase tracking-widest text-ink font-semibold flex items-center gap-1.5 text-xs">
+                <Wand2 className="w-3.5 h-3.5 text-ink" />
+                distractor gen
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">Generate plausible incorrect options for MCQ items.</p>
+              <p className="text-[10px] text-gray-500 font-sans leading-normal">Generate plausible incorrect options for MCQ items.</p>
             </div>
             
             <div className="p-4 flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Quiz Question</label>
+                <label className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">quiz question</label>
                 <textarea 
-                  className="w-full bg-surface border border-border rounded-lg p-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none shadow-sm"
+                  className="w-full bg-gray-50 border border-gray-200 rounded p-3 text-xs text-ink font-sans focus:outline-none focus:border-ink resize-none leading-relaxed transition-colors duration-500"
                   rows={3}
                   placeholder="e.g., Which phase of ADDIE involves creating storyboards?"
                   value={distractorInput}
@@ -289,10 +291,10 @@ export default function CurriculumMapper() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Correct Answer</label>
+                 <label className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">correct answer</label>
                  <input 
                    type="text"
-                   className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
+                   className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-xs text-ink font-sans focus:outline-none focus:border-ink transition-colors duration-500"
                    placeholder="e.g., Design"
                    value={correctAnswerInput}
                    onChange={(e) => { setCorrectAnswerInput(e.target.value); setShowDistractors(false); }}
@@ -302,19 +304,19 @@ export default function CurriculumMapper() {
               <button 
                 onClick={handleGenerateDistractors}
                 disabled={!distractorInput.trim() || !correctAnswerInput.trim() || isGeneratingDistractors}
-                className="w-full py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-ink text-background text-[10px] font-mono uppercase tracking-widest font-semibold rounded hover:bg-ink/90 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isGeneratingDistractors ? <Loader2 className="w-4 h-4 animate-spin" /> : <SparklesIcon />} 
-                {isGeneratingDistractors ? "Generating..." : "Generate Options"}
+                {isGeneratingDistractors ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SparklesIcon />} 
+                {isGeneratingDistractors ? "generating..." : "generate options"}
               </button>
 
                {showDistractors && (
-                <div className="mt-4 pt-4 border-t border-border flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Suggested Distractors</span>
+                <div className="mt-4 pt-4 border-t border-gray-200 flex flex-col gap-3 animate-in fade-in duration-300">
+                  <span className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-widest">suggested options</span>
                   
                   {distractors.map((opt, i) => (
-                    <div key={i} className="flex items-start gap-2 p-2.5 bg-red-50/50 border border-red-100 rounded-md text-sm text-slate-700 group cursor-pointer hover:bg-red-50 transition-colors">
-                      <div className="w-5 h-5 rounded-full bg-white border border-red-200 flex items-center justify-center text-[10px] font-bold text-red-500 shrink-0 mt-0.5">
+                    <div key={i} className="flex items-start gap-2 p-2.5 bg-gray-50 border border-gray-200 rounded text-xs text-ink font-sans">
+                      <div className="w-5 h-5 rounded border border-gray-200 bg-background flex items-center justify-center text-[10px] font-mono font-bold text-ink shrink-0 mt-0.5">
                         {String.fromCharCode(66 + i)}
                       </div>
                       <span>{opt}</span>
@@ -325,9 +327,9 @@ export default function CurriculumMapper() {
                       navigator.clipboard.writeText(distractors.map((opt, idx) => `${String.fromCharCode(66 + idx)}) ${opt}`).join('\n'));
                       alert('Copied all distractors to clipboard!');
                     }}
-                    className="text-xs text-accent font-medium hover:underline self-end mt-1"
+                    className="text-[10px] font-mono uppercase tracking-widest text-ink hover:underline self-end mt-1"
                   >
-                    Copy All
+                    copy all
                   </button>
                 </div>
               )}
@@ -341,7 +343,7 @@ export default function CurriculumMapper() {
 
 function SparklesIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
       <path d="M5 3v4"/>
       <path d="M19 17v4"/>
